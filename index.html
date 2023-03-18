@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta property="og:title" content="acropalypse screenshot recovery utility"/>
+        <meta property="og:type" content="website"/>
+        <meta name="theme-color" content="#36393f">
+        <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+        <title>acropalypse</title>
+        <style>
+            @font-face {
+                font-family: "Noto Sans";
+                src: url(NotoSans.ttf);
+            }
+
+            @font-face {
+                font-family: "Noto Sans Bold";
+                src: url(NotoSans-Bold.ttf);
+            }
+
+            body {
+                color: white;
+                font-family: "Noto Sans", sans-serif;
+                margin: 2em;
+                text-align: center;
+                animation: intro 1s forwards;
+                background: linear-gradient(to bottom right, #36393f, #26292f);
+                background-attachment: fixed;
+            }
+
+            .settings {
+                text-align: left;
+                width: 300px;
+                margin: auto;
+            }
+
+            .resolution {
+                transition: opacity 0.5s;
+            }
+
+            input {
+                font-family: "Noto Sans", sans-serif;
+            }
+
+            input[type="number"] {
+                width: 60px;
+                background-color: transparent;
+                color: white;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                padding-left: 4px;
+            }
+
+            input[type="file"] {
+                display: none;
+            }
+
+            select {
+                font-family: "Noto Sans", sans-serif;
+                width: 240px;
+                background-color: transparent;
+                color: white;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+            }
+
+            option, optgroup {
+                background-color: #36393f;
+            }
+
+            .upload {
+                border: 1px solid #ccc;
+                display: inline-block;
+                padding: 6px 12px;
+                cursor: pointer;
+                text-align: center;
+                border-radius: 8px;
+                transition: background-color 0.4s ease;
+                width: 280px;
+            }
+
+            .upload:hover {
+                background-color: #5b5d61;
+            }
+
+            .logo {
+                font-family: "Noto Sans Bold";
+                color: #f55;
+                font-size: 40pt;
+            }
+
+            .logo-crop {
+                color: white;
+                background-color: rgba(255,255,255,0.2);
+                position: relative;
+                padding-bottom: 0.2em;
+            }
+
+            .logo-crop::before, .logo-crop::after {
+                position: absolute;
+                width: 0.2em;
+                height: 0.2em;
+                border-style: solid;
+                border-color: white;
+                content: ' ';
+            }
+
+            .logo-crop::before {
+                top: -0.5em;
+                left: -0.5em;
+                animation: crop1 0.5s 0.2s forwards;
+                border-width: 0.2em 0 0 0.2em;
+            }
+
+            .logo-crop::after {
+                right: -0.5em;
+                bottom: -0.5em;
+                animation: crop2 0.5s 0.2s forwards;
+                border-width: 0 0.2em 0.2em 0;
+            }
+
+            @keyframes crop1 {
+                from {
+                    top: -0.5em;
+                    left: -0.5em;
+                }
+
+                to {
+                    top: -0.1em;
+                    left: -0.1em;
+                }
+            }
+
+            @keyframes crop2 {
+                from {
+                    right: -0.5em;
+                    bottom: -0.5em;
+                }
+
+                to {
+                    right: -0.1em;
+                    bottom: -0.1em;
+                }
+            }
+
+            @keyframes intro {
+                from {
+                    opacity: 0;
+                    margin-top: 100px;
+                }
+
+                to {
+                    opacity: 1;
+                    margin-top: 0px;
+                }
+            }
+        </style>
+        <script type="text/javascript" src="./acropalypse.js"></script>
+    </head>
+
+    <body>
+        <h1 class="logo">a<span class="logo-crop">crop</span>alypse</h1>
+
+        <h2>Screenshot recovery utility</h2>
+
+        <div class="settings">
+            <div>
+                Device:
+                <select id="device" onchange="setDevice()">
+                    <optgroup label="Device presets">
+                        <option value="p3">Pixel 3</option>
+                        <option value="p3xl">Pixel 3 XL</option>
+                        <option value="p3a">Pixel 3a</option>
+                        <option value="p3axl">Pixel 3a XL</option>
+                        <option value="p4">Pixel 4</option>
+                        <option value="p4xl">Pixel 4 XL</option>
+                        <option value="p4a">Pixel 4a</option>
+                        <option value="p5">Pixel 5</option>
+                        <option value="p5a">Pixel 5a</option>
+                        <option value="p6">Pixel 6</option>
+                        <option value="p6pro">Pixel 6 Pro</option>
+                        <option value="p6a">Pixel 6a</option>
+                        <option value="p7">Pixel 7</option>
+                        <option value="p7pro" selected>Pixel 7 Pro</option>
+                    </optgroup>
+
+                    <optgroup label="Custom resolution">
+                        <option value="custom">Custom</option>
+                    </optgroup>
+                </select>
+            </div>
+
+            <br>
+
+            <div id="resolution" class="resolution" style="display: none">
+                Resolution: <input id="height" value="3120" type="number"> h &times; <input id="width" value="1440" type="number"> w
+                <br><br>
+            </div>
+        </div>
+
+        <label for="upload" class="upload">Select screenshot</label>
+        <input type="file" id="upload"><br>    
+
+        <p id="status"></p>
+
+        <img id="output" width="90%"><br>
+
+        <script>
+            const acropalypse_recover = Module.cwrap('acropalypse_recover', Number, [Number, Number, Number, Number, Number]);
+
+            // Set height and width
+            function setResolution(height, width)
+            {
+                document.getElementById('height').value = height;
+                document.getElementById('width').value  = width;
+            }
+
+            function setDevice()
+            {
+                let device = document.getElementById('device');
+                let custom = document.getElementById('resolution');
+
+                if (device.value == 'custom')
+                {
+                    custom.style.display = 'inline';
+
+                    return;
+                }
+                else
+                {
+                    custom.style.display = 'none';
+                }
+
+                // Select resolution for device selected
+                switch (device.value)
+                {
+                    case 'p3':
+                    case 'p3axl':
+                        setResolution(2160, 1080); break;
+                    case 'p3xl':
+                        setResolution(2960, 1440); break;
+                    case 'p3a':
+                        setResolution(2220, 1080); break;
+                    case 'p4':
+                        setResolution(2280, 1080); break;
+                    case 'p4xl':
+                        setResolution(3040, 1440); break;
+                    case 'p4a':
+                    case 'p5':
+                        setResolution(2340, 1080); break;
+                    case 'p5a':
+                    case 'p6':
+                    case 'p6a':
+                    case 'p7':
+                        setResolution(2400, 1080); break;
+                    case 'p6pro':
+                    case 'p7pro':
+                        setResolution(3120, 1440);
+                }
+            }
+
+            function getErrorMessage(code)
+            {
+                switch (code)
+                {
+                    case -1: return 'Invalid PNG header.';
+                    case -2: return 'No additional image data found.';
+                    case -3: return 'Unknown PNG chunk found.';
+                    case -4: return 'Unable to decompress additional image data. Refresh the page and try again.'
+                    default: return 'An unknown error occurred.';
+                }
+            }
+
+            document.getElementById('upload').addEventListener('change', event =>
+            {
+                let status = document.getElementById('status');
+
+                status.textContent = 'Recovering image...';
+
+                let height = parseInt(document.getElementById('height').value);
+                let width  = parseInt(document.getElementById('width').value);
+
+                // Ensure height and width are entered
+                if (isNaN(height) || isNaN(width))
+                {
+                    status.textContent = 'Error: Please select height and width!';
+                    return;
+                }
+
+                // Get uploaded file
+                let file = event.target.files[0];
+
+                // Ensure uploaded image is a PNG
+                if (file.type != 'image/png')
+                {
+                    status.textContent = 'Error: Input file is not a PNG!';
+                    return;
+                }
+
+                let reader = new FileReader();
+
+                // Runs when file is read
+                reader.onload = function(e)
+                {
+                    // Convert image data to u8 array
+                    let originalImage = new Uint8Array(e.target.result);
+
+                    // Calculate array lengths
+                    let inputLen  = file.size;
+                    let outputLen = ((width * 3) + 1) * height;
+
+                    // Allocate memory in WASM heap
+                    const inputPtr  = Module._malloc(inputLen);
+                    const outputPtr = Module._malloc(outputLen);
+
+                    // Create JS arrays from WASM heap
+                    let input  = new Uint8Array(Module.HEAPU8.buffer, inputPtr,  inputLen);
+                    let output = new Uint8Array(Module.HEAPU8.buffer, outputPtr, outputLen);
+
+                    // Copy image data to WASM heap
+                    input.set(originalImage);
+
+                    // Trigger JS garbage collector
+                    originalImage = null;
+
+                    // Get image
+                    let image = document.getElementById('output');
+
+                    // Attempt to recover image using the ACropalypse bug
+                    let ret;
+
+                    if ((ret = acropalypse_recover(inputPtr, inputLen, outputPtr, width, height)) < 0)
+                    {
+                        // Free memory
+                        Module._free(inputPtr);
+                        Module._free(outputPtr);
+
+                        // Trigger garbage collector
+                        input  = null;
+                        output = null;
+
+                        // Set error
+                        status.textContent = 'Error: ' + getErrorMessage(ret);
+
+                        // Hide image
+                        image.style.display = 'none';
+
+                        // Delete last image if present
+                        if (image.src)
+                            URL.revokeObjectURL(image.src);
+
+                        return;
+                    }
+
+                    // Create new array of size ret
+                    let recoveredImage = new Uint8Array(Module.HEAPU8.buffer, outputPtr, ret);
+
+                    status.textContent = 'Your recovered image:';
+
+                    // Delete last image if present
+                    if (image.src)
+                        URL.revokeObjectURL(image.src);
+
+                    // Set image
+                    image.src           = URL.createObjectURL(new Blob([recoveredImage], { type: 'image/png' }));
+                    image.style.display = 'inline';
+
+                    // Free memory
+                    Module._free(inputPtr);
+                    Module._free(outputPtr);
+
+                    // Trigger garbage collector
+                    input          = null;
+                    output         = null;
+                    recoveredImage = null;
+                }
+
+                // Read file
+                reader.readAsArrayBuffer(file);
+            });
+        </script>
+    </body>
+</html>
